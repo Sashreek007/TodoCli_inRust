@@ -19,18 +19,17 @@ fn main() {
         show_help();
         return;
     }
-    let command: String = &args[1];
-    match command.as_str(){
+    let command = &args[1];
+    match command.as_str() {
         "add" => {
             if args.len() < 3 {
                 println!("Error: 'add' required a task description");
                 return;
             }
-            let description = args[2..].join(" ")
+            let description = args[2..].join(" ");
             add_task(&description);
         }
     }
-
 }
 
 fn show_help() {
@@ -40,31 +39,25 @@ fn show_help() {
     println!("  cargo run -- complete <id>   Mark task as complete");
     println!("  cargo run -- remove <id>     Remove a task");
     println!("  cargo run -- clear           Clear all tasks");
-
-
 }
 
 fn add_task(description: &str) {
-    match load_tasks(){
-
-    }
+    match load_tasks() {}
 }
-
 
 fn load_tasks() -> Result<Vec<Task>, String> {
     if !Path::new(TODO_FILE).exists() {
         return Ok(Vec::new());
     }
-    
-    let contents = fs::read_to_string(TODO_FILE)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
-    
-    let json: Value = serde_json::from_str(&contents)
-        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
-    
-    let tasks_array = json.as_array()
-        .ok_or("JSON must be an array")?;
-    
+
+    let contents =
+        fs::read_to_string(TODO_FILE).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    let json: Value =
+        serde_json::from_str(&contents).map_err(|e| format!("Failed to parse JSON: {}", e))?;
+
+    let tasks_array = json.as_array().ok_or("JSON must be an array")?;
+
     let mut tasks = Vec::new();
     for item in tasks_array {
         let task = Task {
@@ -79,6 +72,25 @@ fn load_tasks() -> Result<Vec<Task>, String> {
         };
         tasks.push(task);
     }
-    
+
     Ok(tasks)
+}
+
+fn save_tasks(tasks: &Vec<Task>) -> Result<(), String> {
+    let json_array: Vec<Value> = tasks
+        .iter()
+        .map(|task| {
+            json!({
+                "id":task.id,
+                "description":task.description,
+                "completed":task.completed,
+            })
+        })
+        .collect();
+    let json_string = serde_json::to_string(&json_array)
+        .map_err(|e| format!("!Failed to serialise JSON: {}", e))?;
+
+    fs::write(TODO_FILE, json_string).map_err(|e| format!("Failed to serialise JSON: {}", e))?;
+
+    Ok(())
 }

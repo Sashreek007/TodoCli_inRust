@@ -19,6 +19,18 @@ fn main() {
         show_help();
         return;
     }
+    let command: String = &args[1];
+    match command.as_str(){
+        "add" => {
+            if args.len() < 3 {
+                println!("Error: 'add' required a task description");
+                return;
+            }
+            let description = args[2..].join(" ")
+            add_task(&description);
+        }
+    }
+
 }
 
 fn show_help() {
@@ -28,4 +40,45 @@ fn show_help() {
     println!("  cargo run -- complete <id>   Mark task as complete");
     println!("  cargo run -- remove <id>     Remove a task");
     println!("  cargo run -- clear           Clear all tasks");
+
+
+}
+
+fn add_task(description: &str) {
+    match load_tasks(){
+
+    }
+}
+
+
+fn load_tasks() -> Result<Vec<Task>, String> {
+    if !Path::new(TODO_FILE).exists() {
+        return Ok(Vec::new());
+    }
+    
+    let contents = fs::read_to_string(TODO_FILE)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    
+    let json: Value = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let tasks_array = json.as_array()
+        .ok_or("JSON must be an array")?;
+    
+    let mut tasks = Vec::new();
+    for item in tasks_array {
+        let task = Task {
+            id: item["id"].as_u64().ok_or("Missing or invalid id")? as u32,
+            description: item["description"]
+                .as_str()
+                .ok_or("Missing or invalid description")?
+                .to_string(),
+            completed: item["completed"]
+                .as_bool()
+                .ok_or("Missing or invalid completed")?,
+        };
+        tasks.push(task);
+    }
+    
+    Ok(tasks)
 }
